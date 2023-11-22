@@ -1,5 +1,5 @@
 import requests
-import wikipediaapi
+import replicate
 import wikipedia
 import streamlit as st
 
@@ -54,3 +54,37 @@ def fetch_wikipedia_section(title, section_title):
         st.write(f"HTTP request timed out: {e}")
     except wikipedia.exceptions.PageError as e:
         st.write(f"Page not found: {e}")
+
+def paraphrase_with_llma(text, desired_processing):
+    return replicate.run(
+        "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+        input={"prompt": f'{text} please {desired_processing} above text'},
+    )
+
+def fetch_wikipedia_content(title, sections):
+    user_agent = "YourAppName/1.0 (your@email.com)"  # Replace with your application name and contact email
+    session = requests.Session()
+    session.headers.update({'User-Agent': user_agent})
+
+    # Fetch Wikipedia content
+    wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&titles={title}&explaintext=1"
+    response = session.get(wiki_url)
+    data = response.json()
+
+    # Extract page content
+    page = next(iter(data['query']['pages'].values()))
+
+    # Check if the page is a disambiguation page
+    if 'missing' in page:
+        print(f"The provided title '{title}' does not exist on Wikipedia.")
+        return {}
+    elif 'disambiguation' in page:
+        print(f"The provided title '{title}' is a disambiguation page. Please choose a more specific title.")
+        return {}
+
+    return {
+        section: page['extract']
+        for section in sections
+        if section.lower() in page['extract'].lower()
+    }
+
