@@ -1,51 +1,56 @@
-import wikipediaapi
-import openai
-import re
 import requests
-from constants import *
+import wikipediaapi
+import wikipedia
+import streamlit as st
 
-def get_wikipedia_corpus(page_title):
-    # Specify a user agent as per Wikipedia's User-Agent policy
-    user_agent = "WikiExplorer/1.0 (prasun.ssvm@email.com)"
+def fetch_sections(title):
+    base_url = "https://en.wikipedia.org/w/api.php"
 
-    headers = {'User-Agent': user_agent}
-    
-    wiki_wiki = wikipediaapi.Wikipedia('en')
-    page_py = wiki_wiki.page(page_title)
+    # Parameters for the API request
+    params = {
+        'action': 'parse',
+        'format': 'json',
+        'page': title,
+        'prop': 'sections'
+    }
 
-    if page_py.exists():
-        # Set the user agent in the headers
-        response = requests.get(page_py.fullurl, headers=headers)
-        
+    try:
+        # Make the API request
+        response = requests.get(base_url, params=params)
+        data = response.json()
+
         # Check if the request was successful
-        if response.status_code == 200:
-            return response.text
-        else:
-            return f"Failed to fetch page. Status code: {response.status_code}"
-    else:
-        return "Page not found."
-def generate_summary_and_paraphrase(section_text):
-    openai.api_key = OPENAI_KEY
-    prompt = f"Summarize and paraphrase the following section:\n\n{section_text}"
+        if 'error' in data:
+            raise Exception(f"Error: {data['error']['info']}")
 
-    response = openai.Completion.create(
-        engine="text-davinci-003",  # Use "text-davinci-003" for GPT-3.5 Turbo
-        prompt=prompt,
-        max_tokens=150,
-        temperature=0.7,
-        n=1,
-    )
+        # Extract sections from the response
+        sections = data['parse']['sections']
 
-    return response.choices[0].text.strip()
+        return [d['line'] for d in sections if 'line' in d]
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
+def fetch_wikipedia_section(title, section_title):
+    user_agent = "RephraseWiki/1.0 x@gmail.com"  # Replace with your app's information
 
-def get_section_from_corpus(corpus, section_title):
-    # Use regular expression to find the content under the specified section heading
-    pattern = re.compile(f'^== {re.escape(section_title)} ==\n(.*?)(?:(?=\n==)|(?=$))', re.MULTILINE | re.DOTALL)
-    match = pattern.search(corpus)
+    wikipedia.set_user_agent(user_agent)
 
-    if match:
-        return match.group(1).strip()
-    else:
-        return f"Section '{section_title}' not found in the corpus."
+    try:
+        # Fetch the summary of the entire page
+        full_summary = wikipedia.summary(title)
+
+        # Find the starting index of the section
+        section_start = full_summary.find(section_title)
+
+        # Find the ending index of the section
+        next_section_start = full_summary.find("==", section_start + 1)
+        section_end = next_section_start if next_section_start != -1 else len(full_summary)
+
+        return full_summary[section_start:section_end].strip()
+    except wikipedia.exceptions.DisambiguationError as e:
+        st.write(f"Ambiguous title: {e.options}")
+    except wikipedia.exceptions.HTTPTimeoutError as e:
+        st.write(f"HTTP request timed out: {e}")
+    except wikipedia.exceptions.PageError as e:
+        st.write(f"Page not found: {e}")
