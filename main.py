@@ -7,7 +7,6 @@ import requests
 import replicate
 import streamlit as st
 
-REPLICATE_API_TOKEN = 'r8_PHGhVRpNF2VgXIGMZ2cJIMKR6ZPmeH62QMwLQ'
 
 
 def main():
