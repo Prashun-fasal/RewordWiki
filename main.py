@@ -3,11 +3,7 @@ import openai
 from text_summarise_utils import *
 openai.api_key = OPENAI_KEY
 import openai
-import requests
-import replicate
 import streamlit as st
-
-REPLICATE_API_TOKEN = 'r8_PHGhVRpNF2VgXIGMZ2cJIMKR6ZPmeH62QMwLQ'
 
 
 def main():
@@ -18,7 +14,9 @@ def main():
         sections_in_corpus = fetch_sections(article_title)
         sections_to_extract = st.sidebar.radio("Select the section you want to summarise or paraphrase ", sections_in_corpus)
         st.write(f'You selected "{sections_to_extract}" section to further processing text for the article titled "{article_title}"')
-        text_from_specific_section = fetch_wikipedia_section(article_title, sections_to_extract)
+        # text_from_specific_section = fetch_wikipedia_section(article_title, sections_to_extract)
+        text_from_specific_section = wikipedia.WikipediaPage(article_title).section(sections_to_extract)
+        text_from_specific_section = text_from_specific_section.replace('\n','').replace("\'","")
         decision_input = st.radio('How do you want to move further:',('see original text','Summarise the section', 'Paraphrase the section'))
         if 'see original text' in decision_input:
             st.write(f'"text from "{sections_to_extract}" :{text_from_specific_section}"')
