@@ -1,7 +1,6 @@
 from constants import *
 import openai
 from text_summarise_utils import *
-openai.api_key = OPENAI_KEY
 import openai
 import streamlit as st
 
